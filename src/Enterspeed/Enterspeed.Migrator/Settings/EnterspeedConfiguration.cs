@@ -1,4 +1,6 @@
-﻿namespace Enterspeed.Migrator.Settings
+﻿using System;
+
+namespace Enterspeed.Migrator.Settings
 {
     public class EnterspeedConfiguration
     {
@@ -6,6 +8,6 @@
         public string ApiKey { get; init; }
         public string NavigationHandle { get; set; }
         public string MigrationPageMetaData { get; set; }
-        public string[] ComponentPropertyTypeKeys { get; set; }
+        public string[] ComponentPropertyTypeKeys { get; set; } = Array.Empty<string>();
     }
 }
