@@ -218,38 +218,44 @@ namespace Umbraco.Migrator.DocumentTypes
         private void AddProperties(EnterspeedPropertyType enterspeedProperty, IContentTypeBase documentType, bool isComposition = false)
         {
             IDataType dataType = null;
-
-            switch (enterspeedProperty.Type)
+            if (!string.IsNullOrWhiteSpace(enterspeedProperty.EditorType))
             {
-                case JsonValueKind.Undefined:
-                    _logger.LogError("Property type is undefined");
-                    break;
-                case JsonValueKind.Object:
-                    // Check if we are a component
-                    break;
-                case JsonValueKind.Array:
-                    // Check if we are a component or simple type of array
-                    var elementValueKind = GetValueKindOfFirstElementInArray(enterspeedProperty);
+                dataType = _dataTypes.Find(d => string.Equals(d.Name, enterspeedProperty.EditorType, StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                switch (enterspeedProperty.DataType)
+                {
+                    case JsonValueKind.Undefined:
+                        _logger.LogError("Property type is undefined");
+                        break;
+                    case JsonValueKind.Object:
+                        // Check if we are a component
+                        break;
+                    case JsonValueKind.Array:
+                        // Check if we are a component or simple type of array
+                        var elementValueKind = GetValueKindOfFirstElementInArray(enterspeedProperty);
 
-                    if (elementValueKind is JsonValueKind.String or JsonValueKind.Number)
-                    {
-                        dataType = _dataTypes.Find(d => d.Name?.ToLower() == "tags");
-                    }
+                        if (elementValueKind is JsonValueKind.String or JsonValueKind.Number)
+                        {
+                            dataType = _dataTypes.Find(d => d.Name?.ToLower() == "tags");
+                        }
 
-                    break;
-                case JsonValueKind.String:
-                    dataType = _dataTypes.Find(d => d.Name?.ToLower() == "textstring");
-                    break;
-                case JsonValueKind.Number:
-                    dataType = _dataTypes.Find(d => d.Name?.ToLower() == "number");
-                    break;
-                case JsonValueKind.True:
-                case JsonValueKind.False:
-                    dataType = _dataTypes.Find(d => d.Name?.ToLower() == "true/false");
-                    break;
-                case JsonValueKind.Null:
-                    _logger.LogError("Property type is null");
-                    break;
+                        break;
+                    case JsonValueKind.String:
+                        dataType = _dataTypes.Find(d => d.Name?.ToLower() == "textstring");
+                        break;
+                    case JsonValueKind.Number:
+                        dataType = _dataTypes.Find(d => d.Name?.ToLower() == "number");
+                        break;
+                    case JsonValueKind.True:
+                    case JsonValueKind.False:
+                        dataType = _dataTypes.Find(d => d.Name?.ToLower() == "true/false");
+                        break;
+                    case JsonValueKind.Null:
+                        _logger.LogError("Property type is null");
+                        break;
+                }
             }
 
             if (dataType != null)
@@ -259,7 +265,7 @@ namespace Umbraco.Migrator.DocumentTypes
                     documentType.AddPropertyType(new PropertyType(_shortStringHelper, dataType)
                     {
                         Name = enterspeedProperty.Name.ToUmbracoName(),
-                        Alias = enterspeedProperty.Alias.ToFirstLowerInvariant(),
+                        Alias = enterspeedProperty.Alias.ToFirstLowerInvariant()
                     }, documentType.Alias + "Content", documentType.Name.ToUmbracoName(new List<string>
                     {
                         "Content"

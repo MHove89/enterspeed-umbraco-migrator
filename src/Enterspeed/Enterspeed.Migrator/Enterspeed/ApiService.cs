@@ -49,8 +49,11 @@ namespace Enterspeed.Migrator.Enterspeed
                 DeliveryApiResponse = await GetByUrlAsync(enterspeedResponse?.Views?.Navigation?.Self?.View?.Url)
             };
 
-            var children = await MapResponseAsync(enterspeedResponse.Views.Navigation?.Children);
-            pageResponse.Children.AddRange(children);
+            if (enterspeedResponse.Views.Navigation?.Children is not null)
+            {
+                var children = await MapResponseAsync(enterspeedResponse.Views.Navigation?.Children);
+                pageResponse.Children.AddRange(children);
+            }
 
             return pageResponse;
         }
