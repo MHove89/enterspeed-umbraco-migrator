@@ -123,29 +123,36 @@ namespace Umbraco.Migrator.DocumentTypes
 
         private void CreatePageDocType(Schema page, IEntity pagesFolder, IEntity compositionsFolder)
         {
-            if (!_contentTypeAliasList.Any(c => c.Equals(page.MetaSchema.SourceEntityAlias)))
+            // Build new doc type or reuse existing
+            var pageDocumentType = GetOrCreatePageDocType(page, pagesFolder);
+
+            RemoveExistingCompositions(pageDocumentType);
+            DeleteExistingProperties(pageDocumentType);
+
+            // Add the rest of the properties
+            AddProperties(page, pageDocumentType, compositionsFolder);
+
+            // TODO: Ensure that this is handled in another way. This is an assumption!
+            pageDocumentType.AddPropertyType(new PropertyType(_shortStringHelper,
+                _dataTypes.Find(d => d.Name == BlockListName))
             {
-                // Build new doc type
-                var newPageDocumentType = BuildNewPageDocType(page, pagesFolder);
+                Name = _umbracoMigrationConfiguration.ContentPropertyAlias.ToUmbracoName(),
+                Alias = _umbracoMigrationConfiguration.ContentPropertyAlias
+            }, "content");
 
-                // Add the rest of the properties
-                AddProperties(page, newPageDocumentType, compositionsFolder);
-
-                // TODO: Ensure that this is handled in another way. This is an assumption!
-                newPageDocumentType.AddPropertyType(new PropertyType(_shortStringHelper,
-                    _dataTypes.Find(d => d.Name == BlockListName))
-                {
-                    Name = _umbracoMigrationConfiguration.ContentPropertyAlias.ToUmbracoName(),
-                    Alias = _umbracoMigrationConfiguration.ContentPropertyAlias
-                }, "content");
-
-                // Save the new document type
-                _contentTypeService.Save(newPageDocumentType);
-            }
+            // Save the new document type
+            _contentTypeService.Save(pageDocumentType);
         }
 
-        private ContentType BuildNewPageDocType(Schema page, IEntity pagesFolder)
+        private IContentType GetOrCreatePageDocType(Schema page, IEntity pagesFolder)
         {
+            var existingContentTypeAlias = _contentTypeAliasList.FirstOrDefault(c =>
+                c.Equals(page.MetaSchema.SourceEntityAlias, StringComparison.InvariantCultureIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(existingContentTypeAlias))
+            {
+                return _contentTypeService.Get(existingContentTypeAlias);
+            }
+
             var newPageDocumentType = new ContentType(_shortStringHelper, pagesFolder.Id)
             {
                 Alias = page.MetaSchema.SourceEntityAlias.ToFirstLowerInvariant(),
@@ -158,8 +165,15 @@ namespace Umbraco.Migrator.DocumentTypes
             return newPageDocumentType;
         }
 
-        private IContentType CreateComposition(IEntity compositionsFolder, EnterspeedPropertyType enterspeedProperty)
+        private IContentType GetOrCreateComposition(IEntity compositionsFolder, EnterspeedPropertyType enterspeedProperty)
         {
+            var existingContentTypeAlias = _contentTypeAliasList.FirstOrDefault(c =>
+                c.Equals(enterspeedProperty.Alias, StringComparison.InvariantCultureIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(existingContentTypeAlias))
+            {
+                return _contentTypeService.Get(existingContentTypeAlias);
+            }
+
             var composition = new ContentType(_shortStringHelper, compositionsFolder.Id)
             {
                 Alias = enterspeedProperty.Alias,
@@ -171,7 +185,7 @@ namespace Umbraco.Migrator.DocumentTypes
             return composition;
         }
 
-        private void AddProperties(Schema schema, ContentType pageDocumentType, IEntity compositionsFolder)
+        private void AddProperties(Schema schema, IContentType pageDocumentType, IEntity compositionsFolder)
         {
             if (_dataTypes?.Any() == true)
             {
@@ -188,28 +202,40 @@ namespace Umbraco.Migrator.DocumentTypes
             }
         }
 
-        private void HandleComposition(ContentType pageDocumentType, IEntity compositionsFolder, EnterspeedPropertyType enterspeedProperty)
+        private void DeleteExistingProperties(IContentType documentType)
+        {
+            var propertyTypes = documentType.PropertyTypes.ToList();
+            foreach (var propertyType in propertyTypes)
+            {
+                documentType.RemovePropertyType(propertyType.Alias);
+            }
+        }
+
+        private void RemoveExistingCompositions(IContentType documentType)
+        {
+            var compositionAliases = documentType.CompositionAliases().ToList();
+            foreach (var compositionAlias in compositionAliases)
+            {
+                documentType.RemoveContentType(compositionAlias);
+            }
+        }
+
+        private void HandleComposition(IContentType pageDocumentType, IEntity compositionsFolder, EnterspeedPropertyType enterspeedProperty)
         {
             var compositionExists = pageDocumentType.ContentTypeCompositionExists(enterspeedProperty.Alias);
             if (!compositionExists)
             {
-                // Check if already exists
-                var composition = _contentTypeService.Get(enterspeedProperty.Alias);
-                if (composition == null)
+                var composition = GetOrCreateComposition(compositionsFolder, enterspeedProperty);
+
+                DeleteExistingProperties(composition);
+
+                // Add properties to composition
+                foreach (var childProperty in enterspeedProperty.ChildProperties)
                 {
-                    composition = CreateComposition(compositionsFolder, enterspeedProperty);
-
-                    // Check if any properties on composition
-                    if (!enterspeedProperty.ChildProperties.Any()) return;
-
-                    // Add properties to composition
-                    foreach (var childProperty in enterspeedProperty.ChildProperties)
-                    {
-                        AddProperties(childProperty, composition, true);
-                    }
-
-                    _contentTypeService.Save(composition);
+                    AddProperties(childProperty, composition, true);
                 }
+
+                _contentTypeService.Save(composition);
 
                 pageDocumentType.AddContentType(composition);
             }
