@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Enterspeed.Delivery.Sdk.Api.Models;
 
 namespace Enterspeed.Migrator.Models.Response
 {
@@ -7,10 +6,11 @@ namespace Enterspeed.Migrator.Models.Response
     {
         public PageResponse()
         {
+            Data = new Dictionary<string, object>();
             Children = new List<PageResponse>();
         }
 
-        public DeliveryApiResponse DeliveryApiResponse { get; set; }
+        public Dictionary<string, object> Data { get; set; }
         public List<PageResponse> Children { get; set; }
     }
 }

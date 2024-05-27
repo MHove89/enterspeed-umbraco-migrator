@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Enterspeed.Delivery.Sdk.Api.Models;
 using Enterspeed.Delivery.Sdk.Api.Services;
+using Enterspeed.Delivery.Sdk.Domain.Models;
 using Enterspeed.Migrator.Enterspeed.Contracts;
 using Enterspeed.Migrator.Models.Response;
 using Enterspeed.Migrator.Settings;
@@ -41,12 +42,16 @@ namespace Enterspeed.Migrator.Enterspeed
             _logger.LogInformation("Calling page url = ", url);
             return await _enterspeedDeliveryService.Fetch(_enterspeedConfiguration.ApiKey, (s) => s.WithUrl(url));
         }
+        public async Task<DeliveryApiResponse> GetByHandlesAsync(List<string> handles)
+        {
+            return await _enterspeedDeliveryService.FetchMany(_enterspeedConfiguration.ApiKey, new GetByIdsOrHandle { Handles = handles });
+        }
 
         public async Task<PageResponse> GetPageResponsesAsync(EnterspeedResponse enterspeedResponse)
         {
             var pageResponse = new PageResponse
             {
-                DeliveryApiResponse = await GetByUrlAsync(enterspeedResponse?.Views?.Navigation?.Self?.View?.Url)
+                Data = (await GetByUrlAsync(enterspeedResponse?.Views?.Navigation?.Self?.Url)).Response.Route
             };
 
             if (enterspeedResponse.Views.Navigation?.Children is not null)
@@ -60,26 +65,29 @@ namespace Enterspeed.Migrator.Enterspeed
 
         private async Task<List<PageResponse>> MapResponseAsync(List<Child> children)
         {
+            var childrenResponse = await GetByHandlesAsync(children.Select(x => x.Self?.Url).ToList());
+
             var pageResponses = new List<PageResponse>();
             foreach (var child in children)
             {
-                var response = await GetByUrlAsync(child?.View?.Self?.View?.Url);
-                if (response.Response == null) continue;
+                if (!childrenResponse.Response.Views.TryGetValue(child?.Self?.Url, out var response) || response is not Dictionary<string, object> data)
+                {
+                    continue;
+                }
 
                 var pageResponse = new PageResponse
                 {
-                    DeliveryApiResponse = response
+                    Data = data
                 };
 
-                if (child?.View?.Children != null && child.View.Children.Any())
+                if (child?.Children != null && child.Children.Any())
                 {
-                    var mappedResponses = await MapResponseAsync(child.View.Children);
+                    var mappedResponses = await MapResponseAsync(child.Children);
                     pageResponse.Children.AddRange(mappedResponses);
                 }
 
                 pageResponses.Add(pageResponse);
             }
-
             return pageResponses;
         }
     }

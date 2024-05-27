@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using Enterspeed.Delivery.Sdk.Api.Models;
 using Enterspeed.Migrator.Constants;
 using Enterspeed.Migrator.Enterspeed.Contracts;
 using Enterspeed.Migrator.Models;
@@ -32,18 +31,17 @@ namespace Enterspeed.Migrator.Enterspeed
         /// </summary>
         /// <param name="deliveryResponse"></param>ƒ
         /// <returns></returns>
-        public MetaSchema GetMetaData(DeliveryResponse deliveryResponse)
+        public MetaSchema GetMetaData(Dictionary<string, object> data)
         {
-            var route = deliveryResponse.Route;
-            if (route == null)
+            if (data == null)
             {
                 _logger.LogError("Route was not found for");
                 return null;
             }
 
-            if (!deliveryResponse.Route.TryGetValue(_configuration.MigrationPageMetaData, out var migrationPageMetaData))
+            if (!data.TryGetValue(_configuration.MigrationPageMetaData, out var migrationPageMetaData))
             {
-                throw new NullReferenceException($"{_configuration.MigrationPageMetaData} not found on the schema for {JsonSerializer.Serialize(route)}");
+                throw new NullReferenceException($"{_configuration.MigrationPageMetaData} not found on the schema for {JsonSerializer.Serialize(data)}");
             }
 
             var serialized = JsonSerializer.Serialize(migrationPageMetaData);
@@ -59,13 +57,13 @@ namespace Enterspeed.Migrator.Enterspeed
         public List<PageData> ResolveFromRoot(PageResponse pageResponse)
         {
             var pageEntityTypes = new List<PageData>();
-            if (pageResponse.DeliveryApiResponse?.Response != null)
+            if (pageResponse.Data != null)
             {
-                var page = GetPageData(pageResponse.DeliveryApiResponse?.Response);
+                var page = GetPageData(pageResponse.Data);
 
                 foreach (var deliveryResponse in pageResponse.Children)
                 {
-                    if (deliveryResponse.DeliveryApiResponse.Response != null)
+                    if (deliveryResponse.Data != null)
                     {
                         page.Children.AddRange(ResolveFromRoot(deliveryResponse));
                     }
@@ -78,14 +76,13 @@ namespace Enterspeed.Migrator.Enterspeed
             return null;
         }
 
-        private PageData GetPageData(DeliveryResponse deliveryResponse)
+        private PageData GetPageData(Dictionary<string, object> data)
         {
-            var route = deliveryResponse.Route;
-            var routeSerialized = JsonSerializer.SerializeToElement(route);
+            var routeSerialized = JsonSerializer.SerializeToElement(data);
 
             var pageEntityType = new PageData
             {
-                MetaSchema = GetMetaData(deliveryResponse)
+                MetaSchema = GetMetaData(data)
             };
 
             MapData(pageEntityType, routeSerialized);

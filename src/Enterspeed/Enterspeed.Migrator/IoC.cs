@@ -23,7 +23,7 @@ namespace Enterspeed.Migrator
             serviceCollection.AddTransient<IEnterspeedConfigurationProvider, InMemoryConfigurationProvider>();
             serviceCollection.AddTransient<IPagesResolver, PagesResolver>();
             serviceCollection.AddTransient<EnterspeedDeliveryConnection>();
-            serviceCollection.AddSingleton(new EnterspeedDeliveryConfiguration { DeliveryVersion = "1" });
+            serviceCollection.AddSingleton(new EnterspeedDeliveryConfiguration { DeliveryVersion = "2" });
             serviceCollection.AddTransient<IJsonSerializer, SystemTextJsonSerializer>();
             serviceCollection.AddOptions();
 

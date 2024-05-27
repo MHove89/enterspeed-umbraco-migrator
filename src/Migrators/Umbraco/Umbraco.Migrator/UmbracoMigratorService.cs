@@ -37,18 +37,28 @@ namespace Umbraco.Migrator
         {
             try
             {
+                _logger.LogInformation("Starting importing document types");
+
                 // Enterspeed responses
+                _logger.LogInformation("Loading navigation from Enterspeed");
                 var navigation = await _apiService.GetNavigationAsync();
+
+                _logger.LogInformation("Loading pages from Enterspeed");
                 var rootLevelResponse = await _apiService.GetPageResponsesAsync(navigation);
 
                 // All pages with all data
+                _logger.LogInformation("Resolving pages");
                 var pages = _pagesResolver.ResolveFromRoot(rootLevelResponse).ToList();
 
                 // Mapped out data structures in schemas based on the pages
+                _logger.LogInformation("Building page schemas");
                 var pageSchemas = _schemaBuilder.BuildPageSchemas(pages);
 
                 // Build document types based on schemas
+                _logger.LogInformation("Building Umbraco doc types");
                 _documentTypeBuilder.BuildDocTypes(pageSchemas);
+
+                _logger.LogInformation("Finished importing document types");
             }
             catch (Exception e)
             {
@@ -61,15 +71,24 @@ namespace Umbraco.Migrator
         {
             try
             {
+                _logger.LogInformation("Starting importing content pages");
+
                 // Enterspeed responses
+                _logger.LogInformation("Loading navigation from Enterspeed");
                 var navigation = await _apiService.GetNavigationAsync();
+
+                _logger.LogInformation("Loading pages from Enterspeed");
                 var rootLevelResponse = await _apiService.GetPageResponsesAsync(navigation);
 
                 // All pages with all data
+                _logger.LogInformation("Resolving pages");
                 var pages = _pagesResolver.ResolveFromRoot(rootLevelResponse).Where(p => p.MetaSchema != null).ToList();
 
                 // Build content based on pages
+                _logger.LogInformation("Building Umbraco content pages");
                 _contentBuilder.BuildContentPages(pages);
+
+                _logger.LogInformation("Finish importing content pages");
             }
             catch (Exception e)
             {
