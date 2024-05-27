@@ -182,7 +182,7 @@ namespace Enterspeed.Migrator.Enterspeed
                         {
                             Name = "arrayObject",
                             Alias = "arrayObject",
-                            Type = JsonValueKind.Object,
+                            DataType = JsonValueKind.Object,
                             Value = objectOfElement
                         };
 
@@ -210,9 +210,15 @@ namespace Enterspeed.Migrator.Enterspeed
 
                 parentEnterspeedProperty?.ChildProperties.Add(currentProperty);
 
-                MapData(pageData, elmenent, currentProperty);
+                if (string.IsNullOrWhiteSpace(currentProperty.EditorType))
+                {
+                    MapData(pageData, elmenent, currentProperty);
+                }
 
-                pageData.Properties.Add(currentProperty);
+                if (parentEnterspeedProperty is null)
+                {
+                    pageData.Properties.Add(currentProperty);
+                }
             }
         }
 

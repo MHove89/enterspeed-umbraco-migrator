@@ -90,7 +90,7 @@ namespace Umbraco.Migrator.Content
         {
             if (contentToCreate.Properties.Any(p => p.Alias == property.Alias))
             {
-                switch (property.Type)
+                switch (property.DataType)
                 {
                     case JsonValueKind.True:
                     case JsonValueKind.False:
