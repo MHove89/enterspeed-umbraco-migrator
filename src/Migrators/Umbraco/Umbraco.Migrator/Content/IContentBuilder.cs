@@ -6,6 +6,7 @@ namespace Umbraco.Migrator.Content
 {
     public interface IContentBuilder
     {
-        void BuildContentPages(List<PageData> pageEntityTypes, IContent parent = null);
+        void BuildContentPages(List<PageData> pageEntityTypes, IContent parent = null); 
+        IContent FindUmbracoStartParentNode(int startParentId);
     }
 }

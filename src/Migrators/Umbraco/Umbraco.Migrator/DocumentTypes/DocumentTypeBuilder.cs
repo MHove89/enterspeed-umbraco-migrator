@@ -37,7 +37,8 @@ namespace Umbraco.Migrator.DocumentTypes
         private const string ComponentsFolderName = "Migrated Components";
         private const string DataTypeFolderName = "Migrated Data Types";
         private const string BlockListName = "BlockList.Custom";
-        private readonly EnterspeedConfiguration _enterspeedConfiguration;
+        private readonly EnterspeedConfiguration _enterspeedConfiguration; 
+        private readonly HashSet<string> _migratedCompositionAliases = new();
 
         public DocumentTypeBuilder(ILogger<DocumentTypeBuilder> logger,
             IContentTypeService contentTypeService,
@@ -195,6 +196,7 @@ namespace Umbraco.Migrator.DocumentTypes
                     if (isComposition)
                     {
                         HandleComposition(pageDocumentType, compositionsFolder, enterspeedProperty);
+                        _migratedCompositionAliases.Add(enterspeedProperty.Alias);
                     }
 
                     AddProperties(enterspeedProperty, pageDocumentType);
@@ -222,20 +224,22 @@ namespace Umbraco.Migrator.DocumentTypes
 
         private void HandleComposition(IContentType pageDocumentType, IEntity compositionsFolder, EnterspeedPropertyType enterspeedProperty)
         {
-            var compositionExists = pageDocumentType.ContentTypeCompositionExists(enterspeedProperty.Alias);
-            if (!compositionExists)
+            var compositionExistsOnPageDocType = pageDocumentType.ContentTypeCompositionExists(enterspeedProperty.Alias);
+            if (!compositionExistsOnPageDocType)
             {
                 var composition = GetOrCreateComposition(compositionsFolder, enterspeedProperty);
-
-                DeleteExistingProperties(composition);
-
-                // Add properties to composition
-                foreach (var childProperty in enterspeedProperty.ChildProperties)
+                if (!_migratedCompositionAliases.Contains(enterspeedProperty.Alias))
                 {
-                    AddProperties(childProperty, composition, true);
-                }
+                    DeleteExistingProperties(composition);
 
-                _contentTypeService.Save(composition);
+                    // Add properties to composition
+                    foreach (var childProperty in enterspeedProperty.ChildProperties)
+                    {
+                        AddProperties(childProperty, composition, true);
+                    }
+
+                    _contentTypeService.Save(composition);
+                }
 
                 pageDocumentType.AddContentType(composition);
             }

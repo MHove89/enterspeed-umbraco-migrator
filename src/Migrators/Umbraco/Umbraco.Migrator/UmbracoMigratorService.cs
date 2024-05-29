@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Enterspeed.Migrator.Enterspeed.Contracts;
+using Enterspeed.Migrator.Models.Response;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Umbraco.Migrator.Content;
 using Umbraco.Migrator.DocumentTypes;
+using Umbraco.Migrator.Settings;
 
 namespace Umbraco.Migrator
 {
@@ -15,7 +19,8 @@ namespace Umbraco.Migrator
         private readonly IApiService _apiService;
         private readonly ILogger<UmbracoMigratorService> _logger;
         private readonly ISchemaBuilder _schemaBuilder;
-        private readonly IContentBuilder _contentBuilder;
+        private readonly IContentBuilder _contentBuilder; 
+        private readonly UmbracoMigrationConfiguration _umbracoMigrationConfiguration;
 
         public UmbracoMigratorService(
             ILogger<UmbracoMigratorService> logger,
@@ -23,7 +28,8 @@ namespace Umbraco.Migrator
             IApiService apiService,
             ISchemaBuilder schemaBuilder,
             IDocumentTypeBuilder documentTypeBuilder,
-            IContentBuilder contentBuilder)
+            IContentBuilder contentBuilder,
+            IOptions<UmbracoMigrationConfiguration> umbracoMigrationConfiguration)
         {
             _logger = logger;
             _pagesResolver = pagesResolver;
@@ -31,6 +37,7 @@ namespace Umbraco.Migrator
             _schemaBuilder = schemaBuilder;
             _documentTypeBuilder = documentTypeBuilder;
             _contentBuilder = contentBuilder;
+            _umbracoMigrationConfiguration = umbracoMigrationConfiguration?.Value;
         }
 
         public async Task ImportDocumentTypesAsync()
@@ -39,16 +46,19 @@ namespace Umbraco.Migrator
             {
                 _logger.LogInformation("Starting importing document types");
 
-                // Enterspeed responses
+                // Enterspeed navigation response
                 _logger.LogInformation("Loading navigation from Enterspeed");
                 var navigation = await _apiService.GetNavigationAsync();
 
+                _logger.LogInformation("Finding start page");
+                var startPage = FindStartPage(navigation, _umbracoMigrationConfiguration.StartIds.SourceId);
+
                 _logger.LogInformation("Loading pages from Enterspeed");
-                var rootLevelResponse = await _apiService.GetPageResponsesAsync(navigation);
+                var pageResponse = await _apiService.GetPageResponsesAsync(startPage);
 
                 // All pages with all data
                 _logger.LogInformation("Resolving pages");
-                var pages = _pagesResolver.ResolveFromRoot(rootLevelResponse).ToList();
+                var pages = _pagesResolver.ResolveFromRoot(pageResponse).ToList();
 
                 // Mapped out data structures in schemas based on the pages
                 _logger.LogInformation("Building page schemas");
@@ -77,16 +87,21 @@ namespace Umbraco.Migrator
                 _logger.LogInformation("Loading navigation from Enterspeed");
                 var navigation = await _apiService.GetNavigationAsync();
 
+                _logger.LogInformation("Finding start page");
+                var startPage = FindStartPage(navigation, _umbracoMigrationConfiguration.StartIds.SourceId);
+
                 _logger.LogInformation("Loading pages from Enterspeed");
-                var rootLevelResponse = await _apiService.GetPageResponsesAsync(navigation);
+                var PageResponse = await _apiService.GetPageResponsesAsync(startPage);
 
                 // All pages with all data
                 _logger.LogInformation("Resolving pages");
-                var pages = _pagesResolver.ResolveFromRoot(rootLevelResponse).Where(p => p.MetaSchema != null).ToList();
+                var pages = _pagesResolver.ResolveFromRoot(PageResponse).Where(p => p.MetaSchema != null).ToList();
+
+                var umbracoStartParentNode = _contentBuilder.FindUmbracoStartParentNode(_umbracoMigrationConfiguration.StartIds.TargetParentId);
 
                 // Build content based on pages
                 _logger.LogInformation("Building Umbraco content pages");
-                _contentBuilder.BuildContentPages(pages);
+                _contentBuilder.BuildContentPages(pages, umbracoStartParentNode);
 
                 _logger.LogInformation("Finish importing content pages");
             }
@@ -95,6 +110,49 @@ namespace Umbraco.Migrator
                 _logger.LogError(e, "something went wrong when seeding data");
                 throw;
             }
+        }
+        private static Item FindStartPage(EnterspeedResponse navigationResponse, string startId)
+        {
+            if (navigationResponse?.Views?.Navigation?.Self is null)
+            {
+                throw new ArgumentNullException(nameof(navigationResponse), "navigationResponse.Views.Navigation.Self must not be null");
+            }
+
+            if (string.IsNullOrWhiteSpace(startId))
+            {
+                return navigationResponse.Views.Navigation;
+            }
+
+            if (navigationResponse.Views.Navigation.Self.SourceId == startId)
+            {
+                return navigationResponse.Views.Navigation;
+            }
+
+            Item startPage = null;
+            if (navigationResponse.Views.Navigation.Children.Any())
+            {
+                startPage = FindStartPage(navigationResponse.Views.Navigation.Children, startId);
+            }
+
+            return startPage ?? navigationResponse.Views.Navigation;
+        }
+
+        private static Item FindStartPage(List<Item> children, string startId)
+        {
+            foreach (var child in children)
+            {
+                if (child.Self?.SourceId == startId)
+                {
+                    return child;
+                }
+
+                if (child.Children.Any())
+                {
+                    return FindStartPage(child.Children, startId);
+                }
+            }
+
+            return null;
         }
     }
 }

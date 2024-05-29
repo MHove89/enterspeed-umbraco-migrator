@@ -156,5 +156,10 @@ namespace Umbraco.Migrator.Content
             contentToCreate.SetValue(_umbracoMigrationConfiguration.ContentPropertyAlias, blockListSerialized);
             _contentService.Save(contentToCreate);
         }
+
+        public IContent FindUmbracoStartParentNode(int startParentId)
+        {
+            return startParentId == 0 ? null : _contentService.GetById(startParentId);
+        }
     }
 }

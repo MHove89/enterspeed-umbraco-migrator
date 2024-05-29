@@ -20,32 +20,23 @@ namespace Enterspeed.Migrator.Models.Response
         [JsonPropertyName("url")]
         public string Url { get; set; }
 
-        [JsonPropertyName("lastModified")]
-        public string LastModified { get; set; }
+        [JsonPropertyName("sourceId")]
+        public string SourceId { get; set; }
     }
 
-    public class Child
+    public class Item
     {
         [JsonPropertyName("self")]
         public Self Self { get; set; }
 
         [JsonPropertyName("children")]
-        public List<Child> Children { get; set; }
-    }
-
-    public class Navigation
-    {
-        [JsonPropertyName("self")]
-        public Self Self { get; set; }
-
-        [JsonPropertyName("children")]
-        public List<Child> Children { get; set; }
+        public List<Item> Children { get; set; }
     }
 
     public class Views
     {
         [JsonPropertyName("navigation")]
-        public Navigation Navigation { get; set; }
+        public Item Navigation { get; set; }
     }
 
     public class EnterspeedResponse
