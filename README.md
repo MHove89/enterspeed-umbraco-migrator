@@ -52,7 +52,7 @@ Example of the PageData objects returned from GetPageResponsesAsync
 ```cs title="PageData object"
 public class PageResponse
 {
-    public DeliveryApiResponse DeliveryApiResponse { get; set; }
+    public Dictionary<string, object> Data { get; set; }
     public List<PageResponse> Children { get; set; }
 }
 ```
@@ -72,7 +72,8 @@ public class EnterspeedPropertyType
 {
     public string Name { get; set; }
     public string Alias { get; set; }
-    public JsonValueKind @Type { get; set; }
+    public JsonValueKind DataType { get; set; }
+    public string EditorType { get; set; }
     public object Value { get; set; }
     public List<EnterspeedPropertyType> ChildProperties { get; set; }
 }
@@ -80,6 +81,11 @@ public class EnterspeedPropertyType
 
 As you can see we are allowing this object to contain children of itself. This is to mimic a content tree structure. 
 We also have the property types defined here as well. This setup allows multiple nested complex types, and can therefore support nested arrays, objects and much more. These are all mapped recursively.
+
+We also have a `EditorType` property which is used if you want to control which editor is used in the source system. Maybe you want some string properties to be mapped to a single line text field but other string properties should be mapped to a textarea or a rich text editor.
+You define this in the mapping schemas and you can see examples of it in the page schema examples __[here](/assets/schemas/Pages/)__.
+
+If no editor type is defined a default editor will be used based on the `DataType`.
 
 The `SchemaBuilder` converts all page data into a set of unique objects. The schemas are the sum of all the data and types that were received in the earlier steps. It has figured out how many property types Schema xx should have, their names as well as their value types. A schema is best compared to a document type in Umbraco.
 
@@ -99,7 +105,7 @@ So now we have a clean set of data, with all its unique schemas that we can work
 We have built an Umbraco 10 specific converter, that converts the output of the generic migrator to Umbraco data. 
 The  __[DocumentTypeBuilder](/src/Migrators/Umbraco/Umbraco.Migrator/DocumentTypes/DocumentTypeBuilder.cs)__ receives the schemas from the generic migrator and interprets the different schemas and saves them as document types, elements, and compositions in Umbraco. Properties are all interpreted and added to before mentioned types of data in Umbraco. 
 
-The simple types are managed through a switch statement, that converts these to the equivalent in Umbraco. 
+The simple types are managed through a switch statement, that converts these to the equivalent in Umbraco, unless an editor type in defined as mentioned above. 
 For the complex types, we have set up a component builder handler, that requires you to create your builders. This is for scenarios where you want to convert for example grid components to element types used in a blocklist or nested content. 
 There are quite a few samples __[here](/src/Migrators/Umbraco/Umbraco.Migrator/DocumentTypes/Components/Builders/)__.
 
