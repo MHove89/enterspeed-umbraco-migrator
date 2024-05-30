@@ -148,7 +148,11 @@ namespace Umbraco.Migrator
 
                 if (child.Children.Any())
                 {
-                    return FindStartPage(child.Children, startId);
+                    var startPage = FindStartPage(child.Children, startId);
+                    if (startPage is not null)
+                    {
+                        return startPage;
+                    }
                 }
             }
 
