@@ -65,12 +65,19 @@ namespace Enterspeed.Migrator.Enterspeed
 
         private async Task<List<PageResponse>> MapResponseAsync(List<Child> children)
         {
-            var childrenResponse = await GetByHandlesAsync(children.Select(x => x.Self?.Url).ToList());
+            var childrenUrls = children.Select(x => x?.Self?.Url).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
 
             var pageResponses = new List<PageResponse>();
-            foreach (var child in children)
+            if (!childrenUrls.Any())
             {
-                if (!childrenResponse.Response.Views.TryGetValue(child?.Self?.Url, out var response) || response is not Dictionary<string, object> data)
+                return pageResponses;
+            }
+
+            var childrenResponse = await GetByHandlesAsync(childrenUrls);
+
+            foreach (var child in children.Where(x => x is not null))
+            {
+                if (!childrenResponse.Response.Views.TryGetValue(child.Self?.Url, out var response) || response is not Dictionary<string, object> data)
                 {
                     continue;
                 }
