@@ -24,6 +24,7 @@ namespace Umbraco.Migrator.Content
         private readonly UmbracoMigrationConfiguration _umbracoMigrationConfiguration;
         private readonly ILogger<ContentBuilder> _logger;
         private readonly IEnumerable<IComponentBuilder> _componentBuilders;
+        private int pageCounter = 0;
 
         public ContentBuilder(IContentTypeService contentTypeService,
             IContentService contentService,
@@ -42,6 +43,11 @@ namespace Umbraco.Migrator.Content
         {
             foreach (var pageEntityType in pageEntityTypes)
             {
+                if (pageCounter++ % 1000 == 0)
+                {
+                    _logger.LogInformation($"Created {pageCounter} content pages.");
+                }
+
                 var isRoot = pageEntityType.MetaSchema.SourceEntityAlias.Contains(_umbracoMigrationConfiguration.RootDocType);
                 var contentType = _contentTypes.FirstOrDefault(c =>
                     string.Equals(c.Alias, pageEntityType.MetaSchema.SourceEntityAlias, StringComparison.InvariantCultureIgnoreCase));
