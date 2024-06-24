@@ -140,7 +140,11 @@ These are all values that are used for the CMS-specific converter to interpret t
     "CompositionKeys": [
       "basePage", // alias of your properties
       "footer" // alias of your properties
-    ]
+    ],
+    "StartIds": {
+      "SourceId": "", // the id of the start entity in the source system
+      "TargetParentId": 0 // the id of the parent entity in the target system
+    }
   }
 }
 ```

@@ -8,7 +8,6 @@ using Enterspeed.Delivery.Sdk.Domain.Models;
 using Enterspeed.Migrator.Enterspeed.Contracts;
 using Enterspeed.Migrator.Models.Response;
 using Enterspeed.Migrator.Settings;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Enterspeed.Migrator.Enterspeed
@@ -17,15 +16,12 @@ namespace Enterspeed.Migrator.Enterspeed
     {
         private readonly IEnterspeedDeliveryService _enterspeedDeliveryService;
         private readonly EnterspeedConfiguration _enterspeedConfiguration;
-        private readonly ILogger<ApiService> _logger;
 
         public ApiService(IEnterspeedDeliveryService enterspeedDeliveryService,
-            IOptions<EnterspeedConfiguration> enterspeedConfiguration,
-            ILogger<ApiService> logger)
+            IOptions<EnterspeedConfiguration> enterspeedConfiguration)
         {
             _enterspeedDeliveryService = enterspeedDeliveryService;
             _enterspeedConfiguration = enterspeedConfiguration?.Value;
-            _logger = logger;
         }
 
         public async Task<EnterspeedResponse> GetNavigationAsync()
@@ -39,31 +35,31 @@ namespace Enterspeed.Migrator.Enterspeed
 
         public async Task<DeliveryApiResponse> GetByUrlAsync(string url)
         {
-            _logger.LogInformation("Calling page url = ", url);
             return await _enterspeedDeliveryService.Fetch(_enterspeedConfiguration.ApiKey, (s) => s.WithUrl(url));
         }
+
         public async Task<DeliveryApiResponse> GetByHandlesAsync(List<string> handles)
         {
             return await _enterspeedDeliveryService.FetchMany(_enterspeedConfiguration.ApiKey, new GetByIdsOrHandle { Handles = handles });
         }
 
-        public async Task<PageResponse> GetPageResponsesAsync(EnterspeedResponse enterspeedResponse)
+        public async Task<PageResponse> GetPageResponsesAsync(Item page)
         {
             var pageResponse = new PageResponse
             {
-                Data = (await GetByUrlAsync(enterspeedResponse?.Views?.Navigation?.Self?.Url)).Response.Route
+                Data = (await GetByUrlAsync(page?.Self.Url)).Response.Route
             };
 
-            if (enterspeedResponse.Views.Navigation?.Children is not null)
+            if (page?.Children is not null && page.Children.Any())
             {
-                var children = await MapResponseAsync(enterspeedResponse.Views.Navigation?.Children);
+                var children = await MapResponseAsync(page?.Children);
                 pageResponse.Children.AddRange(children);
             }
 
             return pageResponse;
         }
 
-        private async Task<List<PageResponse>> MapResponseAsync(List<Child> children)
+        private async Task<List<PageResponse>> MapResponseAsync(List<Item> children)
         {
             var childrenUrls = children.Select(x => x?.Self?.Url).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
 
