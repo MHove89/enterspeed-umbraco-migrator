@@ -9,5 +9,6 @@ namespace Umbraco.Migrator.Settings
         public string[] CompositionKeys { get; set; } = Array.Empty<string>();
         public string ContentPropertyAlias { get; set; }
         public StartIds StartIds { get; set; } = new();
+        public int ContentImportMaxTreeLevel { get; set; } = 0;
     }
 }

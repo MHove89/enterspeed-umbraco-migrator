@@ -141,6 +141,7 @@ These are all values that are used for the CMS-specific converter to interpret t
       "basePage", // alias of your properties
       "footer" // alias of your properties
     ],
+    "ContentImportMaxTreeLevel": 0, // Limits the content import to a max tree level depth. Useful when testing as a full content import can take a long time
     "StartIds": {
       "SourceId": "", // the id of the start entity in the source system
       "TargetParentId": 0 // the id of the parent entity in the target system

@@ -87,15 +87,17 @@ namespace Umbraco.Migrator
                 _logger.LogInformation("Loading navigation from Enterspeed");
                 var navigation = await _apiService.GetNavigationAsync();
 
+                LimitTreeDepth(navigation, _umbracoMigrationConfiguration.ContentImportMaxTreeLevel);
+
                 _logger.LogInformation("Finding start page");
                 var startPage = FindStartPage(navigation, _umbracoMigrationConfiguration.StartIds.SourceId);
 
                 _logger.LogInformation("Loading pages from Enterspeed");
-                var PageResponse = await _apiService.GetPageResponsesAsync(startPage);
+                var pageResponse = await _apiService.GetPageResponsesAsync(startPage);
 
                 // All pages with all data
                 _logger.LogInformation("Resolving pages");
-                var pages = _pagesResolver.ResolveFromRoot(PageResponse).Where(p => p.MetaSchema != null).ToList();
+                var pages = _pagesResolver.ResolveFromRoot(pageResponse).Where(p => p.MetaSchema != null).ToList();
 
                 var umbracoStartParentNode = _contentBuilder.FindUmbracoStartParentNode(_umbracoMigrationConfiguration.StartIds.TargetParentId);
 
@@ -111,6 +113,45 @@ namespace Umbraco.Migrator
                 throw;
             }
         }
+
+        private static void LimitTreeDepth(EnterspeedResponse navigationResponse, int maxLevel)
+        {
+            ArgumentNullException.ThrowIfNull(navigationResponse?.Views?.Navigation?.Self);
+
+            if (maxLevel == 0)
+            {
+                return;
+            }
+
+            if (maxLevel == 1)
+            {
+                navigationResponse.Views.Navigation.Children = new List<Item>();
+                return;
+            }
+
+            var currentLevel = 1;
+            if (navigationResponse.Views.Navigation.Children.Any())
+            {
+                LimitTreeDepth(navigationResponse.Views.Navigation.Children, maxLevel, currentLevel);
+            }
+        }
+
+        private static void LimitTreeDepth(List<Item> children, int maxLevel, int currentLevel)
+        {
+            currentLevel += 1;
+            foreach (var child in children.Where(x => x is not null))
+            {
+                if (currentLevel >= maxLevel)
+                {
+                    child.Children = new List<Item>();
+                }
+                else
+                {
+                    LimitTreeDepth(child.Children, maxLevel, currentLevel);
+                }
+            }
+        }
+
         private static Item FindStartPage(EnterspeedResponse navigationResponse, string startId)
         {
             if (navigationResponse?.Views?.Navigation?.Self is null)
