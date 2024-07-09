@@ -42,7 +42,13 @@ namespace Enterspeed.Migrator.ValueTypes
 
         private static bool TryGetAsEditorValue(JsonProperty jsonProperty, out EditorValue editorValue)
         {
+            editorValue = null;
             var potentialEditorValueObject = jsonProperty.Value;
+
+            if (potentialEditorValueObject.ValueKind is not JsonValueKind.Object)
+            {
+                return false;
+            }
 
             string editorType = null;
             if (potentialEditorValueObject.TryGetProperty("editorType", out var editorTypeElement))
@@ -58,7 +64,6 @@ namespace Enterspeed.Migrator.ValueTypes
 
             if (string.IsNullOrWhiteSpace(editorType))
             {
-                editorValue = null;
                 return false;
             }
 

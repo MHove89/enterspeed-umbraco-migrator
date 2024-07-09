@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -33,11 +34,6 @@ namespace Enterspeed.Migrator.Enterspeed
             return JsonSerializer.Deserialize<EnterspeedResponse>(json);
         }
 
-        public async Task<DeliveryApiResponse> GetByUrlAsync(string url)
-        {
-            return await _enterspeedDeliveryService.Fetch(_enterspeedConfiguration.ApiKey, (s) => s.WithUrl(url));
-        }
-
         public async Task<DeliveryApiResponse> GetByHandlesAsync(List<string> handles)
         {
             return await _enterspeedDeliveryService.FetchMany(_enterspeedConfiguration.ApiKey, new GetByIdsOrHandle { Handles = handles });
@@ -45,14 +41,20 @@ namespace Enterspeed.Migrator.Enterspeed
 
         public async Task<PageResponse> GetPageResponsesAsync(Item page)
         {
+            var handleResponse = await GetByHandlesAsync(new List<string> { page?.Self.SourceId });
+            if (!handleResponse.Response.Views.TryGetValue(page?.Self?.SourceId, out var response) || response is not Dictionary<string, object> data)
+            {
+                throw new DataException("Response is not valid");
+            }
+
             var pageResponse = new PageResponse
             {
-                Data = (await GetByUrlAsync(page?.Self.Url)).Response.Route
+                Data = data
             };
 
             if (page?.Children is not null && page.Children.Any())
             {
-                var children = await MapResponseAsync(page?.Children);
+                var children = await MapResponseAsync(page.Children);
                 pageResponse.Children.AddRange(children);
             }
 
