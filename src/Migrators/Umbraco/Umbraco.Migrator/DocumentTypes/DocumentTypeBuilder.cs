@@ -139,7 +139,7 @@ namespace Umbraco.Migrator.DocumentTypes
             {
                 Name = _umbracoMigrationConfiguration.ContentPropertyAlias.ToUmbracoName(),
                 Alias = _umbracoMigrationConfiguration.ContentPropertyAlias
-            }, "content");
+            }, "content", "Page content");
 
             // Save the new document type
             _contentTypeService.Save(pageDocumentType);
